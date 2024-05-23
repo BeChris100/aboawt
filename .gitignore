@@ -1,0 +1,6 @@
+.idea
+linux-aarch64
+linux-x86_64
+android-*
+build
+out
