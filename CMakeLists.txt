@@ -13,4 +13,5 @@ include_directories("include")
 add_executable(aboawt
         src/main.cpp
         src/Application/Definitions.cpp
-        src/Application/Utils.cpp)
+        src/Application/Utils.cpp
+        src/Swap/SwapManager.cpp)

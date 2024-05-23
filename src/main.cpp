@@ -2,7 +2,6 @@
 #include <unistd.h>
 #include <string>
 #include <vector>
-#include <map>
 
 #include <Application/Definitions.h>
 #include <Application/Utils.h>
@@ -15,7 +14,7 @@ void help() {
     std::cout << "aboawt (AOSP building on Android with Termux) v1.0" << std::endl << std::endl;
     std::cout << "usage: ./aboawt [options] [action]" << std::endl << std::endl;
     std::cout << "options:" << std::endl;
-    std::cout << "  --no-preserve-swap              Do not initialize a Swap file" << std::endl;
+    std::cout << "  --no-preserve-swap              Do not initialize a Swap file, if no swap file is in use" << std::endl;
     std::cout << "  --no-mass-storage-attachment    Do not use an external storage card (e.g. USB/SD card)" << std::endl;
     std::cout << "  --assume-swap-capable           Assumes that the kernel is swap capable (dangerous!)" << std::endl;
     std::cout << "  --swap-size=[size]              Sets a specific amount of Swap (\"[size]\": amount of swap file size; e.g. 16G)" << std::endl << std::endl;
@@ -35,6 +34,7 @@ void help() {
 
 bool args(int argc, char **argv) {
     std::vector<std::string> actionList;
+    bool pushArg = false;
 
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -71,20 +71,37 @@ bool args(int argc, char **argv) {
                 return true;
             }
 
-            if (arg == "prepare")
+            if (arg == "prepare") {
                 action = ACTION_PREPARE;
+                pushArg = true;
+            }
 
-            if (arg == "init")
+            if (arg == "init") {
                 action = ACTION_INITIALIZE;
+                pushArg = true;
+            }
 
-            if (arg == "fetch")
+            if (arg == "fetch") {
                 action = ACTION_FETCH;
+                pushArg = true;
+            }
 
-            if (arg == "build")
+            if (arg == "build") {
                 action = ACTION_BUILD;
+                pushArg = true;
+            }
 
-            actionList.push_back(arg);
+            if (arg == "help") {
+                help();
+                return true;
+            }
+
+            if (pushArg)
+                actionList.push_back(arg);
         }
+
+        if (pushArg)
+            pushArg = false;
     }
 
     if (action == ACTION_NONE) {
@@ -114,8 +131,20 @@ int main(int argc, char **argv, char **env) {
             return 1;
     }
 
+#ifdef __ANDROID__
+    if (__ANDROID_API__ >= 29) {
+        std::cout << "Without root, your Android system might cause a bit of Storage mayhem." << std::endl;
+        std::cout << "This is due to the integration of \"ScopedStorage\"." << std::endl;
+        std::cout << "If possible, proceed with root." << std::endl;
+    }
+#endif
+
     if (getuid() != 0) {
-        std::cerr << "root required to operate" << std::endl;
+        if (RandomInteger(0, 100000) == 102)
+            std::cerr << "ROOT IS REQUIRED. ROOT, BROTHER, ROOT! ROOT YER DEVICE!" << std::endl;
+        else
+            std::cerr << "root required to operate" << std::endl;
+
         return 1;
     }
 
