@@ -11,24 +11,38 @@
 
 #include <string>
 
-namespace Application::Definitions {
-    extern bool AssumeSwapSupport;
-    extern bool PreserveSwap;
-    extern bool UseExternalStorage;
+namespace Application {
 
-    extern long SwapSize;
+    enum ActionType {
+        NONE = 0,
+        PREPARE = 1,
+        INITIALIZE = 2,
+        FETCH = 3,
+        BUILD = 4
+    };
 
-    long SpecificSwapSize(char *value);
-}
+    namespace Definitions {
+        extern bool AssumeSwapSupport;
+        extern bool PreserveSwap;
+        extern bool UseExternalStorage;
 
-namespace Application::Variables {
-    extern std::string AOSP_WORK_DIR;
-    extern std::string AOSP_OUTPUT_DIR;
-    extern std::string AOSP_REMOTE_URL;
-    extern std::string AOSP_REMOTE_BRANCH;
-    extern std::string DRIVE_PATH;
+        extern long SwapSize;
+        extern long DefaultSwapSize;
 
-    extern int GIT_DEPTH;
+        long SpecificSwapSize(char *value);
+    }
+
+    namespace Variables {
+        extern bool AOSP_WORK_DIR_InPWD;
+        extern std::string AOSP_WORK_DIR;
+        extern std::string AOSP_OUTPUT_DIR;
+        extern std::string AOSP_REMOTE_URL;
+        extern std::string AOSP_REMOTE_BRANCH;
+        extern std::string DRIVE_PATH;
+
+        extern int GIT_DEPTH;
+    }
+
 }
 
 #endif //ABOAWT_DEFINITIONS_H

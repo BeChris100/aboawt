@@ -2,13 +2,23 @@
 #include <unistd.h>
 #include <string>
 #include <vector>
+#include <chrono>
+#include <thread>
 
+#include <Android/BatteryManager.h>
 #include <Application/Definitions.h>
 #include <Application/Utils.h>
+#include <Application/CmdLine.h>
+
+#ifdef __ANDROID__
+#include <android/api-level.h>
+#endif
 
 std::string action = ACTION_NONE;
 
 using namespace Application::Utils;
+using namespace Application::Variables;
+using namespace Application::Definitions;
 
 void help() {
     std::cout << "aboawt (AOSP building on Android with Termux) v1.0" << std::endl << std::endl;
@@ -24,6 +34,7 @@ void help() {
     std::cout << "  fetch                           Fetches the files from the remote URL (similar to \"repo sync\" process)" << std::endl;
     std::cout << "  build                           Builds the AOSP" << std::endl << std::endl;
     std::cout << "Takes env variables:" << std::endl;
+    std::cout << "  AOSP_WORK_DIR_InPWD=y|N         Uses the current working shell's directory instead of creating a new folder (default: N; changes to Y, if \"AOSP_WORK_DIR\" is changed)" << std::endl;
     std::cout << "  AOSP_WORK_DIR=[path]            Puts the AOSP codebase in a specific directory (defaults to the current directory, or relative path of \"DRIVE_PATH\")" << std::endl;
     std::cout << "  AOSP_OUTPUT_DIR=[path]          Puts the compiled AOSP code to its specific directory (defaults to the current directory's \"out\" folder)" << std::endl;
     std::cout << "  AOSP_REMOTE_URL=[url]           Takes in a remote manifest URL (default: \"https://android.googlesource.com/platform/manifest\")" << std::endl;
@@ -41,10 +52,10 @@ bool args(int argc, char **argv) {
 
         if (arg[0] == '-') {
             if (arg == "--no-preserve-swap")
-                Application::Definitions::PreserveSwap = false;
+                PreserveSwap = false;
 
             if (arg == "--no-mass-storage-attachment")
-                Application::Definitions::UseExternalStorage = false;
+                UseExternalStorage = false;
 
             if (arg == "--assume-swap-capable") {
                 if (RandomInteger(1, 500) != 210) {
@@ -59,7 +70,7 @@ bool args(int argc, char **argv) {
                     std::cerr << "If not... well, not my problem, if the app crashes, or your device crashes." << std::endl;
                 }
 
-                Application::Definitions::AssumeSwapSupport = true;
+                AssumeSwapSupport = true;
             }
         } else {
             if (arg == "none") {
@@ -132,7 +143,8 @@ int main(int argc, char **argv, char **env) {
     }
 
 #ifdef __ANDROID__
-    if (__ANDROID_API__ >= 29) {
+    int apiLevel = android_get_device_api_level();
+    if (apiLevel >= 29) {
         std::cout << "Without root, your Android system might cause a bit of Storage mayhem." << std::endl;
         std::cout << "This is due to the integration of \"ScopedStorage\"." << std::endl;
         std::cout << "If possible, proceed with root." << std::endl;
@@ -140,10 +152,17 @@ int main(int argc, char **argv, char **env) {
 #endif
 
     if (getuid() != 0) {
-        if (RandomInteger(0, 100000) == 102)
-            std::cerr << "ROOT IS REQUIRED. ROOT, BROTHER, ROOT! ROOT YER DEVICE!" << std::endl;
-        else
-            std::cerr << "root required to operate" << std::endl;
+        if (RandomInteger(0, 100000) == 102) {
+            // im fucking evil
+            std::cerr << "Warning: Malware Injection in place. Your phone is about to get bricked, if you do not root your device." << std::endl;
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(2680));
+            std::cerr << "Not really, it was actually quite pathetic." << std::endl;
+
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            std::cerr << "However, this tool still needs root access." << std::endl;
+        } else
+            std::cerr << "This tool requires root access to operate." << std::endl;
 
         return 1;
     }
@@ -159,20 +178,27 @@ int main(int argc, char **argv, char **env) {
         std::string key = env_var.substr(0, pos);
         std::string val = env_var.substr(pos + 1);
 
-        if (key == "AOSP_WORK_DIR")
-            Application::Variables::AOSP_WORK_DIR = val;
+        if (key == "AOSP_WORK_DIR_InPWD")
+            AOSP_WORK_DIR_InPWD = StrToBool(val, AOSP_WORK_DIR_InPWD);
+
+        if (key == "AOSP_WORK_DIR") {
+            if (!AOSP_WORK_DIR_InPWD)
+                AOSP_WORK_DIR_InPWD = true;
+
+            AOSP_WORK_DIR = val;
+        }
 
         if (key == "AOSP_OUTPUT_DIR")
-            Application::Variables::AOSP_OUTPUT_DIR = val;
+            AOSP_OUTPUT_DIR = val;
 
         if (key == "AOSP_REMOTE_URL")
-            Application::Variables::AOSP_REMOTE_URL = val;
+            AOSP_REMOTE_URL = val;
 
         if (key == "AOSP_REMOTE_BRANCH")
-            Application::Variables::AOSP_REMOTE_BRANCH = val;
+            AOSP_REMOTE_BRANCH = val;
 
         if (key == "DRIVE_PATH")
-            Application::Variables::DRIVE_PATH = val;
+            DRIVE_PATH = val;
 
         if (key == "GIT_DEPTH") {
             if (!SafeIntConversion(val)) {
@@ -180,8 +206,12 @@ int main(int argc, char **argv, char **env) {
                 return 1;
             }
 
-            Application::Variables::GIT_DEPTH = std::stoi(val);
+            GIT_DEPTH = std::stoi(val);
         }
+    }
+
+    if (action == ACTION_PREPARE) {
+        Application::Cmdline::
     }
 
     return 0;
